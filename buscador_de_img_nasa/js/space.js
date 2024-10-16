@@ -1,47 +1,59 @@
-document.getElementById('buscar').addEventListener('click', async function() {
-    const busqueda = document.getElementById('busqueda').value;
-    const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(busqueda)}`;
+const userInput = document.getElementById('inputBuscar');
+const btnBuscar = document.getElementById('btnBuscar');
+const galeria = document.getElementById('contenedor');
 
-    try {
-        const respuesta = await fetch(url);
-        if (!respuesta.ok) {
-            throw new Error('Error en la respuesta de la API');
-        }
+const buscarImagenes = () => {
+  const input = userInput.value;
+  if (input === '') {
+    alert('Por favor ingrese un termino');
+    return;
+  }
 
-        const datos = await respuesta.json();
-        mostrarResultados(datos);
-    } catch (error) {
-        console.error("Error:", error);
-        document.getElementById('resultados').innerHTML = "Error al obtener resultados.";
-    }
-});
+  const url = `https://images-api.nasa.gov/search?q=${input}`;
+  
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Ocurrió un error');
+      }
+      return response.json();
+    })
+    .then(data => {
+      galeria.innerHTML = '';
 
-function mostrarResultados(imagenes) {
-    const resultadosDiv = document.getElementById('resultados');
-    resultadosDiv.innerHTML = ''; // Limpiar resultados anteriores
+      const resultados = data.collection.items;
+      if (resultados.length === 0) {
+        contenedor.innerHTML = '<p>No se encontraron resultados.</p>';
+        return;
+      }
 
-    if (imagenes && imagenes.collection && imagenes.collection.items.length > 0) {
-        imagenes.collection.items.forEach(item => {
-            const titulo = item.data[0]?.title || 'Sin título';
-            const descripcion = item.data[0]?.description || 'Sin descripción';
-            const fecha = item.data[0]?.date_created || 'Sin fecha';
-            const imagenUrl = item.links[0]?.href || '';
+      resultados.forEach(item => {
+        const {title, description, date_created} = item.data[0];
+        const img = item.links && item.links.length > 0 ? item.links[0].href : null;
+        const dateObj = new Date(date_created);
+        const formattedDate = dateObj.toLocaleDateString();
 
-            resultadosDiv.innerHTML += `
-                <div class="col-md-4">
-                    <div class="card mb-4">
-                        <img class="card-img-top" src="${imagenUrl}" alt="${titulo}">
-                        <div class="card-body">
-                            <h5 class="card-title">${titulo}</h5>
-                            <p class="card-text">${descripcion}</p>
-                            <p class="card-text"><small class="text-muted">Fecha: ${fecha}</small></p>
-                            <a href="${imagenUrl}" class="btn btn-primary" target="_blank">Ver imagen</a>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-    } else {
-        resultadosDiv.innerHTML = "No se encontraron imágenes.";
-    }
-}
+        const card = `
+          <div class="col-md-4 my-3"> 
+            <div class="card">
+              ${img ? `<img src="${img}" class="card-img-top" alt="${title || 'Sin Título'}">` : ''}
+              <div class="card-body">
+                <h5 class="card-title">${title}</h5>
+                <p class="card-text" id="description">${description || 'Sin Descripción'}</p>
+                <p class="card-text"><small class="text-muted">Fecha: ${formattedDate};</p>
+              </div>
+            </div>
+          </div>
+        `;
+
+        galeria.innerHTML += card;
+
+      });
+    })
+    .catch(error => {
+      console.error('Ocurrió un error:', error);
+      galeria.innerHTML = '<p>Ocurrió un error al realizar la búsqueda</p>';
+    });
+};
+
+btnBuscar.addEventListener('click', buscarImagenes);
